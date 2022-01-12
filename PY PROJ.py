@@ -8,7 +8,9 @@ import tkinter.scrolledtext as tkst
 from PIL import ImageTk,Image
 import configparser
 import pyautogui as gui
+from functools import lru_cache
 import keyboard as kb
+import csv
 
 ADM='ADM'
 
@@ -56,6 +58,31 @@ screenshots of the responses by the app to show them, and note what you were doi
     count = count + 1
     return r
 
+@lru_cache(maxsize=50)
+def loaddata(file='BOOKDATA.csv',pb=None):
+    with open(file,encoding='utf-8') as f:
+        rows=[]
+        reader=csv.reader(f)
+        fields=next(reader)
+        reader=list(reader)
+        quan=len(reader)
+        for row in reader:
+            try:
+                if reader.index(row)%50==0:
+                    pb['value']=(reader.index(row)/quan)*100
+                    app.update()
+                    pass
+                rows.append(row)
+            except Exception as e:
+                print(e)
+                print(row)
+    d={}
+    for row in rows:
+        d[row[0]]={'ID':row[0],'title':row[0],'author':row[1],'rating':row[2],'date':row[3],'publisher':row[4]}
+    for k,v in list(d.items())[:5]:
+        print(k,v)
+    return d
+
 app = Tk()
 frame=ttk.Frame(app,padding='5 1 5 5')
 frame.grid(column=0,row=0,sticky=(N,W,E,S))
@@ -97,15 +124,20 @@ def MainFrame(arg=None):
     if STATE!='WELCOME': print(F"User is trying to log in without being on log in page")
     with open('U.P.txt') as f:
         passes=eval(f.read())
-    if User.get() in list(passes.keys()):
-        if passes[User.get()]==Pass.get():
+    if User.get().strip() in list(passes.keys()):
+        if passes[User.get().strip()]==Pass.get().strip():
             pass
         else:
             msgbox=messagebox.showwarning('Incorrect Login Details','The login credentials you entered do not match any user.')
+            return
     else:
         msgbox=messagebox.showwarning('Incorrect Login Details','The login credentials you entered do not match any user.')
+        return
     STATE="MAIN"
-    destroyall()
+    pb=ttk.Progressbar(frame,orient=HORIZONTAL,length=100,mode='determinate')
+    pb.grid(row=4,column=1,sticky=NSEW,columnspan=2,padx=5)
+    loaddata(pb=pb)
+    #destroyall()
     app.unbind('<Return>')
     app.title("Library Management Tool")
     app.geometry(F"1000x1000")
@@ -170,6 +202,8 @@ def WelcomeFrame(arg=None):
     for child in frame.winfo_children():
         child.grid_configure(padx=5, pady=5)
     app.bind('<Return>',MainFrame)
+    User.set('Vedic')######################
+    Pass.set('Pass')#######################
 
 #app.iconphoto(False, PhotoImage(file=resource_path('icon.png')))
 
