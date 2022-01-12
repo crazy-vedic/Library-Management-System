@@ -68,17 +68,17 @@ def loaddata(file='BOOKDATA.csv',pb=None):
         quan=len(reader)
         for row in reader:
             try:
-                if reader.index(row)%50==0:
-                    pb['value']=(reader.index(row)/quan)*100
-                    app.update()
-                    pass
+                #if reader.index(row)%50==0:#ENABLE PROGRESSBAR
+                #    pb['value']=(reader.index(row)/quan)*100
+                #    app.update()
+                #    pass
                 rows.append(row)
             except Exception as e:
                 print(e)
                 print(row)
     d={}
     for row in rows:
-        d[row[0]]={'ID':row[0],'title':row[0],'author':row[1],'rating':row[2],'date':row[3],'publisher':row[4]}
+        d[row[0]]={'ID':row[0],'title':row[1],'author':row[2],'rating':row[3],'date':row[4],'publisher':row[5]}
     for k,v in list(d.items())[:5]:
         print(k,v)
     return d
@@ -121,6 +121,18 @@ def RegisterFrame(arg=None):
 
 def MainFrame(arg=None):
     global STATE
+    global FilterTitle
+    global FilterID
+    global FilterAuthor
+    global FilterRating
+    global FilterDate
+    global FilterPublisher
+    FilterID=StringVar(frame)
+    FilterTitle=StringVar(frame)
+    FilterAuthor=StringVar(frame)
+    FilterRating=StringVar(frame)
+    FilterDate=StringVar(frame)
+    FilterPublisher=StringVar(frame)
     if STATE!='WELCOME': print(F"User is trying to log in without being on log in page")
     with open('U.P.txt') as f:
         passes=eval(f.read())
@@ -137,10 +149,29 @@ def MainFrame(arg=None):
     pb=ttk.Progressbar(frame,orient=HORIZONTAL,length=100,mode='determinate')
     pb.grid(row=4,column=1,sticky=NSEW,columnspan=2,padx=5)
     loaddata(pb=pb)
-    #destroyall()
+    destroyall()
     app.unbind('<Return>')
     app.title("Library Management Tool")
-    app.geometry(F"1000x1000")
+    app.geometry(F"848x500")
+    #ID
+    Label(frame,text='Book ID :').grid(row=0,column=0)
+    Entry(frame,textvariable=FilterID,width=5).grid(row=0,column=1)
+    #Title
+    Label(frame,text='Title :').grid(row=0,column=2)
+    Entry(frame,textvariable=FilterTitle,width=60).grid(row=0,column=3,padx=1)
+    #Author
+    Label(frame,text='Author :').grid(row=0,column=4)
+    Entry(frame,textvariable=FilterAuthor,width=40).grid(row=0,column=5,padx=1)
+    #Rating
+    Label(frame,text='Rating :').grid(row=1,column=0)
+    Entry(frame,textvariable=FilterRating,width=5).grid(row=1,column=1,padx=1,pady=3)
+    #Publisher
+    Label(frame,text='Publisher :').grid(row=1,column=2)
+    Entry(frame,textvariable=FilterPublisher,width=60).grid(row=1,column=3,padx=3)
+    #Date
+    Label(frame,text='Date :').grid(row=1,column=4)
+    Entry(frame,textvariable=FilterDate,width=40).grid(row=1,column=5,padx=5)
+    #for child in frame.winfo_children(): child.grid_configure(padx=5, pady=5)
 
 def ADMPASS(arg=None):
     global AdminPEntry
@@ -164,7 +195,11 @@ def CheckADM(arg=None):
                 msgbox=messagebox.showwarning("User Already Exists","This user already has a saved profile.\nPlease contact your admin for details")
                 return
             else:
-                passes[str(User.get())]=str(Pass.get())
+                if User.get()==User.get().strip() and Pass.get()==Pass.get().strip():
+                    passes[str(User.get())]=str(Pass.get())
+                else:
+                    msgbox=messagebox.showwarning("Credentials Format Error","Please do not leave any spaces at the end or beginning of the User/Name")
+                    return
         with open('U.P.txt','w') as f:
             f.write(str(passes))
         messagebox.showinfo('User has been added successfully',F"{User.get()} was added as a user to the system.")
