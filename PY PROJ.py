@@ -1,6 +1,5 @@
-import requests#NO TIME USE APP.AFTER()
+#NO TIME USE APP.AFTER()
 import datetime
-import random
 from tkinter import *
 from tkinter import ttk
 from tkinter import font
@@ -8,13 +7,6 @@ from tkinter import messagebox
 import tkinter.scrolledtext as tkst
 from PIL import ImageTk,Image
 import configparser
-from playsound import playsound
-import webbrowser
-import pyperclip as pc
-import os
-import sys
-import urllib3
-import hashlib
 import pyautogui as gui
 import keyboard as kb
 
@@ -101,12 +93,13 @@ def RegisterFrame(arg=None):
         child.grid_configure(padx=5, pady=5)
 
 def MainFrame(arg=None):
+    global STATE
     if STATE!='WELCOME': print(F"User is trying to log in without being on log in page")
     with open('U.P.txt') as f:
         passes=eval(f.read())
     if User.get() in list(passes.keys()):
         if passes[User.get()]==Pass.get():
-            continue
+            pass
         else:
             msgbox=messagebox.showwarning('Incorrect Login Details','The login credentials you entered do not match any user.')
     else:
@@ -163,14 +156,16 @@ def WelcomeFrame(arg=None):
     User=StringVar(frame)
     Pass=StringVar(frame)
     userLabel=Label(frame,text='User').grid(row=1,column=1)
-    userEntry=Entry(frame,textvariable=User).grid(row=1,column=2)
+    userEntry=Entry(frame,textvariable=User)
+    userEntry.focus_set()
+    userEntry.grid(row=1,column=2)
     passLabel=Label(frame,text='Password').grid(row=2,column=1)
     userEntry=Entry(frame,textvariable=Pass,show="*").grid(row=2,column=2)
     #Register=ImageTk.PhotoImage(Image.open("register.png"))
     REGISTER=Button(frame,text='Register',font=font.Font(family='Helvetica',name='Register Button Font',size=8),command=RegisterFrame).grid(row=3,column=1,sticky=NSEW)
     #REGISTER['font']=font.Font(family='Helvetica',name='Register Button Font',size=8)
     #REGISTER.grid(row=3,column=1)
-    PASSCHECK=Button(frame,activebackground='#00FFFF',bg='#00FFFF',text="Next")
+    PASSCHECK=Button(frame,activebackground='#00FFFF',bg='#00FFFF',text="Next",command=MainFrame)
     PASSCHECK.grid(row=3,column=2,sticky=NSEW)
     for child in frame.winfo_children():
         child.grid_configure(padx=5, pady=5)
