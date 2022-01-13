@@ -78,7 +78,7 @@ def loaddata(file='BOOKDATA.csv',pb=None):
                 print(row)
     d={}
     for row in rows:
-        d[row[0]]={'ID':row[0],'title':row[1],'author':row[2],'rating':row[3],'date':row[4],'publisher':row[5]}
+        d[row[0]]={'ID':row[0],'Title':row[1],'Author':row[2],'Rating':row[3],'Date':row[4],'Publisher':row[5]}
     for k,v in list(d.items())[:5]:
         print(k,v)
     return d
@@ -101,9 +101,6 @@ def RegisterFrame(arg=None):
     global passEntry
     global RegisterB
     ADMINP=StringVar(frame)
-    #RegLabel=Label(frame,text="Register with an Admin Password")
-    #RegLabel['font']=font.Font(family='Helvetica',name='Welcome Title Font1',size=20,weight='bold')
-    #RegLabel.grid(column=5,row=0)
     AdminPLabel=Label(frame,text="Admin Password").grid(column=2,row=1)
     AdminPEntry=Entry(frame,textvariable=ADMINP,show="*")
     AdminPEntry.bind('<KeyRelease>',ADMPASS)
@@ -148,11 +145,12 @@ def MainFrame(arg=None):
     STATE="MAIN"
     pb=ttk.Progressbar(frame,orient=HORIZONTAL,length=100,mode='determinate')
     pb.grid(row=4,column=1,sticky=NSEW,columnspan=2,padx=5)
-    loaddata(pb=pb)
+    activedata=loaddata(pb=pb)
     destroyall()
     app.unbind('<Return>')
     app.title("Library Management Tool")
-    app.geometry(F"848x500")
+    app.geometry(F"850x520")
+    #AdminPEntry.bind('<KeyRelease>',ADMPASS)
     #ID
     Label(frame,text='Book ID :').grid(row=0,column=0)
     Entry(frame,textvariable=FilterID,width=5).grid(row=0,column=1)
@@ -161,7 +159,7 @@ def MainFrame(arg=None):
     Entry(frame,textvariable=FilterTitle,width=60).grid(row=0,column=3,padx=1)
     #Author
     Label(frame,text='Author :').grid(row=0,column=4)
-    Entry(frame,textvariable=FilterAuthor,width=40).grid(row=0,column=5,padx=1)
+    Entry(frame,textvariable=FilterAuthor,width=35).grid(row=0,column=5,padx=1,sticky=W)
     #Rating
     Label(frame,text='Rating :').grid(row=1,column=0)
     Entry(frame,textvariable=FilterRating,width=5).grid(row=1,column=1,padx=1,pady=3)
@@ -170,8 +168,34 @@ def MainFrame(arg=None):
     Entry(frame,textvariable=FilterPublisher,width=60).grid(row=1,column=3,padx=3)
     #Date
     Label(frame,text='Date :').grid(row=1,column=4)
-    Entry(frame,textvariable=FilterDate,width=40).grid(row=1,column=5,padx=5)
+    Entry(frame,textvariable=FilterDate,width=35).grid(row=1,column=5,padx=1,sticky=W)
     #for child in frame.winfo_children(): child.grid_configure(padx=5, pady=5)
+#PASSCHECK=Button(frame,activebackground='#00FFFF',bg='#00FFFF',text="Next",command=MainFrame)
+    #TABLE
+    table=Frame(frame,bd=4,height=443)
+    table.grid(row=2,column=0,sticky=NSEW,columnspan=6,padx=5,pady=4)
+    
+    TableBBID=Button(table,text='Sno↓↑',width=6).grid(row=0,column=0,sticky=W)
+    TableBTitle=Button(table,text='Title',width=50).grid(row=0,column=1,sticky=W)
+    TableBAuthor=Button(table,text='Author',width=20).grid(row=0,column=2,sticky=W)
+    TableBRating=Button(table,text='Rating',width=6).grid(row=0,column=3,sticky=W)
+    TableBPublisher=Button(table,text='Publisher',width=20).grid(row=0,column=4,sticky=W)
+    TableBDate=Button(table,text='Date',width=7).grid(row=0,column=5,sticky=W)
+
+    for r in range(1,23):
+        exec(F"X{r}0=Entry(table,text=list(activedata.items())[0][1]['ID'],width=7)")
+        exec(F"X{r}0.grid(row={r},column=0,sticky=EW)")
+        exec(F"X{r}1=Entry(table,text=list(activedata.items())[0][1]['Title'],width=59)")
+        exec(F"X{r}1.grid(row={r},column=1,sticky=EW)")
+        exec(F"X{r}2=Entry(table,text=list(activedata.items())[0][1]['Author'],width=24)")
+        exec(F"X{r}2.grid(row={r},column=2,sticky=EW)")
+        exec(F"X{r}3=Entry(table,text=list(activedata.items())[0][1]['Rating'],width=8)")
+        exec(F"X{r}3.grid(row={r},column=3,sticky=EW)")
+        exec(F"X{r}4=Entry(table,text=list(activedata.items())[0][1]['Publisher'],width=24)")
+        exec(F"X{r}4.grid(row={r},column=4,sticky=EW)")
+        exec(F"X{r}5=Entry(table,text=list(activedata.items())[0][1]['Date'],width=9)")
+        exec(F"X{r}5.grid(row={r},column=5,sticky=EW)")
+    Label(table,text='X number of rows present').grid(row=23,column=4,columnspan=2,sticky=W)
 
 def ADMPASS(arg=None):
     global AdminPEntry
@@ -202,14 +226,17 @@ def CheckADM(arg=None):
                     return
         with open('U.P.txt','w') as f:
             f.write(str(passes))
+        RegisterB.configure(bg='green')
+        app.after(5000,fixify)
         messagebox.showinfo('User has been added successfully',F"{User.get()} was added as a user to the system.")
         User.set('')
         Pass.set('')
-        #RegisterB.configure(bg='green')
-        #app.after(5000)
-        #RegisterB.configure(bg='SystemButtonFace')
     else:
         msgbox=messagebox.showwarning('Wrong Password','Admin Password entered is wrong.\nPlease contact your admin for the password.')
+
+def fixify(arg=None):
+    global RegisterB
+    RegisterB.configure(bg='SystemButtonFace')
 
 #WELCOME PAGE ON START UP
 def WelcomeFrame(arg=None):

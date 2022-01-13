@@ -1,1 +1,1 @@
-{'Vedic': 'Pass'}
+{'Vedic': 'Pass', 'Vedic44': 'Pass', 'rr': 'Pass'}
