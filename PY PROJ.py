@@ -1,9 +1,9 @@
 #NO TIME USE APP.AFTER()
-import datetime
+from datetime import datetime
 from tkinter import *
 from tkinter import ttk
 from tkinter import font
-from tkinter import messagebox
+from tkinter import messagebox,Menu,Checkbutton
 import tkinter.scrolledtext as tkst
 from PIL import ImageTk,Image
 import configparser
@@ -78,9 +78,7 @@ def loaddata(file='BOOKDATA.csv',pb=None):
                 print(row)
     d={}
     for row in rows:
-        d[row[0]]={'ID':row[0],'Title':row[1],'Author':row[2],'Rating':row[3],'Date':row[4],'Publisher':row[5]}
-    for k,v in list(d.items())[:5]:
-        print(k,v)
+        d[row[0]]={'ID':row[0],'Title':row[1],'Author':row[2],'Rating':row[3],'Date':row[4],'Publisher':row[5],'Available':row[6]}
     return d
 
 app = Tk()
@@ -145,57 +143,138 @@ def MainFrame(arg=None):
     STATE="MAIN"
     pb=ttk.Progressbar(frame,orient=HORIZONTAL,length=100,mode='determinate')
     pb.grid(row=4,column=1,sticky=NSEW,columnspan=2,padx=5)
-    activedata=loaddata(pb=pb)
+    global totalD
+    totalD=loaddata(pb=pb)
     destroyall()
     app.unbind('<Return>')
     app.title("Library Management Tool")
-    app.geometry(F"850x520")
+    app.geometry(F"912x480")
     #AdminPEntry.bind('<KeyRelease>',ADMPASS)
     #ID
-    Label(frame,text='Book ID :').grid(row=0,column=0)
-    Entry(frame,textvariable=FilterID,width=5).grid(row=0,column=1)
+    Label(frame,text='Book ID :').grid(row=0,column=0,sticky=W)
+    Entry(frame,textvariable=FilterID,width=5).grid(row=0,column=1,sticky=W)
     #Title
-    Label(frame,text='Title :').grid(row=0,column=2)
-    Entry(frame,textvariable=FilterTitle,width=60).grid(row=0,column=3,padx=1)
+    Label(frame,text='Title :').grid(row=0,column=2,sticky=W)
+    TITLETEMP=Entry(frame,textvariable=FilterTitle,width=60)
+    TITLETEMP.grid(row=0,column=3,padx=1,sticky=W)
+    TITLETEMP.focus()
     #Author
-    Label(frame,text='Author :').grid(row=0,column=4)
+    Label(frame,text='Author :').grid(row=0,column=4,sticky=W)
     Entry(frame,textvariable=FilterAuthor,width=35).grid(row=0,column=5,padx=1,sticky=W)
     #Rating
-    Label(frame,text='Rating :').grid(row=1,column=0)
-    Entry(frame,textvariable=FilterRating,width=5).grid(row=1,column=1,padx=1,pady=3)
+    Label(frame,text='Rating :').grid(row=1,column=0,sticky=W)
+    Entry(frame,textvariable=FilterRating,width=5).grid(row=1,column=1,padx=1,pady=3,sticky=W)
     #Publisher
-    Label(frame,text='Publisher :').grid(row=1,column=2)
-    Entry(frame,textvariable=FilterPublisher,width=60).grid(row=1,column=3,padx=3)
+    Label(frame,text='Publisher :').grid(row=1,column=2,sticky=W)
+    Entry(frame,textvariable=FilterPublisher,width=60).grid(row=1,column=3,padx=1,sticky=W)
     #Date
-    Label(frame,text='Date :').grid(row=1,column=4)
+    Label(frame,text='Date :').grid(row=1,column=4,sticky=W)
     Entry(frame,textvariable=FilterDate,width=35).grid(row=1,column=5,padx=1,sticky=W)
-    #for child in frame.winfo_children(): child.grid_configure(padx=5, pady=5)
-#PASSCHECK=Button(frame,activebackground='#00FFFF',bg='#00FFFF',text="Next",command=MainFrame)
+    #Page Up/Down
+    PGUP=Button(frame,text='PgUp',height=1,width=5).grid(row=0,column=6,sticky=W)
+    #PGDN=Button(frame,image=ImageTk.PhotoImage(Image.open('pgdn.png')),height=1,width=4).grid(row=1,column=6,sticky=W)
+    PGDN=Button(frame,text='PgDn',height=1,width=5).grid(row=1,column=6,sticky=W)
+
     #TABLE
-    table=Frame(frame,bd=4,height=443)
-    table.grid(row=2,column=0,sticky=NSEW,columnspan=6,padx=5,pady=4)
-    
+    table=Frame(frame,height=443)
+    table.grid(row=2,column=0,sticky=NSEW,columnspan=7,padx=5,pady=4)
+
     TableBBID=Button(table,text='Sno↓↑',width=6).grid(row=0,column=0,sticky=W)
     TableBTitle=Button(table,text='Title',width=50).grid(row=0,column=1,sticky=W)
     TableBAuthor=Button(table,text='Author',width=20).grid(row=0,column=2,sticky=W)
-    TableBRating=Button(table,text='Rating',width=6).grid(row=0,column=3,sticky=W)
+    TableBRating=Button(table,text='Rating↓',width=5).grid(row=0,column=3,sticky=W)
     TableBPublisher=Button(table,text='Publisher',width=20).grid(row=0,column=4,sticky=W)
-    TableBDate=Button(table,text='Date',width=7).grid(row=0,column=5,sticky=W)
+    TableBDate=Button(table,text='Date',width=8).grid(row=0,column=5,sticky=W)
+    #Search
+    Search=Button(table,text="Search",height=1,width=8,command=updateVData).grid(row=0,column=6,padx=4,sticky="NSW")
 
-    for r in range(1,23):
-        exec(F"X{r}0=Entry(table,text=list(activedata.items())[0][1]['ID'],width=7)")
-        exec(F"X{r}0.grid(row={r},column=0,sticky=EW)")
-        exec(F"X{r}1=Entry(table,text=list(activedata.items())[0][1]['Title'],width=59)")
-        exec(F"X{r}1.grid(row={r},column=1,sticky=EW)")
-        exec(F"X{r}2=Entry(table,text=list(activedata.items())[0][1]['Author'],width=24)")
-        exec(F"X{r}2.grid(row={r},column=2,sticky=EW)")
-        exec(F"X{r}3=Entry(table,text=list(activedata.items())[0][1]['Rating'],width=8)")
-        exec(F"X{r}3.grid(row={r},column=3,sticky=EW)")
-        exec(F"X{r}4=Entry(table,text=list(activedata.items())[0][1]['Publisher'],width=24)")
-        exec(F"X{r}4.grid(row={r},column=4,sticky=EW)")
-        exec(F"X{r}5=Entry(table,text=list(activedata.items())[0][1]['Date'],width=9)")
-        exec(F"X{r}5.grid(row={r},column=5,sticky=EW)")
-    Label(table,text='X number of rows present').grid(row=23,column=4,columnspan=2,sticky=W)
+    global VISIBLE
+    VISIBLE=[]
+    for r in range(1,16):
+        exec(F"X{r}0=Text(table,height=1,width=6)")
+        #exec(F"X{r}0.insert(INSERT,list(totalD.items())[0][1]['ID'])")
+        exec(F"X{r}0.grid(row={r},column=0,sticky='NEW')")
+        exec(F"X{r}1=Text(table,height=1,width=40)")
+        #exec(F"X{r}1.insert(INSERT,list(totalD.items())[0][1]['Title'])")
+        exec(F"X{r}1.grid(row={r},column=1,sticky='NEW')")
+        exec(F"X{r}2=Text(table,height=1,width=15)")
+        #exec(F"X{r}2.insert(INSERT,list(totalD.items())[0][1]['Author'])")
+        exec(F"X{r}2.grid(row={r},column=2,sticky='NEW')")
+        exec(F"X{r}3=Text(table,height=1,width=5)")
+        #exec(F"X{r}3.insert(INSERT,list(totalD.items())[0][1]['Rating'])")
+        exec(F"X{r}3.grid(row={r},column=3,sticky='NEW')")
+        exec(F"X{r}4=Text(table,height=1,width=15)")
+        #exec(F"X{r}4.insert(INSERT,list(totalD.items())[0][1]['Publisher'])")
+        exec(F"X{r}4.grid(row={r},column=4,sticky='NEW')")
+        exec(F"X{r}5=Text(table,height=1,width=8,font=font.Font(family='Helvetica',name='Date Font',size=9))")
+        #exec(F"X{r}5.insert(INSERT,list(totalD.items())[0][1]['Date'])")
+        exec(F"X{r}5.grid(row={r},column=5,sticky='NEW')")
+
+        exec(F"Status{r}6=IntVar()")
+        exec(F"StatusCKB{r}6=Checkbutton(table,text='Available',variable=Status{r}6)")
+        #if int(list(totalD.items())[0][1]['Available']):
+        #print(int(list(totalD.items())[0][1]['Available']))
+        exec(F"StatusCKB{r}6.grid(row={r},column=6)")
+        exec(F"StatusCKB{r}6.select()")
+        VISIBLE.append(eval(F"[X{r}0,X{r}1,X{r}2,X{r}3,X{r}4,X{r}5]"))
+    updateVData()        
+    app.bind('<Return>',updateVData)
+    Label(table,text='X-X+15 of 200').grid(row=23,column=4,columnspan=2,sticky='NW')
+    
+def updateVData(data=None):
+    UPDATEDATA()
+    for row in VISIBLE:
+        for box in row:
+            box.delete('1.0',END)
+        for r,col in zip(list(range(0,6)),['ID','Title','Author','Rating','Publisher','Date']):
+            try:
+                row[r].insert(INSERT,list(Activedata.items())[VISIBLE.index(row)][1][col])
+            except IndexError as e:
+                continue
+
+def UPDATEDATA():
+    global FilterTitle
+    global FilterID
+    global FilterAuthor
+    global FilterRating
+    global FilterDate
+    global FilterPublisher
+    data=totalD
+    if FilterID.get()!='':
+        data=dict(filter(lambda x: int(x[1]['ID'])==int(FilterID.get()),data.items()))
+    if FilterTitle.get()!='':
+        data=dict(filter(lambda x: FilterTitle.get().lower() in x[1]['Title'].lower(),data.items()))
+    if FilterAuthor.get()!='':
+        data=dict(filter(lambda x: FilterAuthor.get().lower() in x[1]['Author'].lower(),data.items()))
+    if FilterRating.get()!='':
+        Rating=float(''.join([char for char in FilterRating.get() if char.isdigit()]))
+        data=dict(filter(lambda x: Rating>float(x[1]['Rating']) if FilterRating.get().startswith('<') or FilterRating.get().endswith('-') or FilterRating.get().startswith('-') else Rating<float(x[1]['Rating']) if FilterRating.get().startswith('>') or FilterRating.get().startswith('+') or FilterRating.get().endswith('+') else Rating==float(x[1]['Rating']),data.items()))
+    if FilterPublisher.get()!='':
+        data=dict(filter(lambda x: FilterPublisher.get().lower() in x[1]['Publisher'].lower(),data.items()))
+    if FilterDate.get()!='':
+        try:
+            date=Datefromdate(''.join([char for char in FilterDate.get() if char in list(map(str,list(range(0,10))))+['/']]))
+            if date==None: return
+            data=dict(filter(lambda x: date>Datefromdate(x[1]['Date']) if FilterDate.get().startswith('<') or FilterDate.get().endswith('-') or FilterDate.get().startswith('-') else date<Datefromdate(x[1]['Date']) if FilterDate.get().startswith('>') or FilterDate.get().startswith('+') or FilterDate.get().endswith('+') else date==Datefromdate(x[1]['Date'].strip()),data.items()))
+        except IndexError as e:
+            data=dict(filter(lambda x: FilterDate.get().lower() in x[1]['Date'].lower(),data.items()))
+    global Activedata
+    Activedata=data
+
+def Datefromdate(s):
+    try:
+        if not int(s.split('/')[0]) in list(range(1,13)):
+            messagebox.showerror("Filter Format Error","Month must be 1-12")
+            return None
+    except Exception as e:
+        print(e)
+        print(s)
+    try:
+        date=datetime(int(s.split('/')[2]),int(s.split('/')[0]),int(s.split('/')[1]))
+    except ValueError as e:
+        print(s)
+        return None
+    return date
 
 def ADMPASS(arg=None):
     global AdminPEntry
