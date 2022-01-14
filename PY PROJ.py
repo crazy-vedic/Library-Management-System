@@ -201,6 +201,8 @@ def MainFrame(arg=None):
 
     global VISIBLE
     VISIBLE=[]
+    global CKBs
+    CKBs=[]
     for r in range(1,16):
         exec(F"X{r}0=Text(table,height=1,width=6)")
         exec(F"X{r}0.grid(row={r},column=0,sticky='NEW')")
@@ -215,13 +217,14 @@ def MainFrame(arg=None):
         exec(F"X{r}5=Text(table,height=1,width=8,font=font.Font(family='Helvetica',name='Date Font',size=9))")
         exec(F"X{r}5.grid(row={r},column=5,sticky='NEW')")
 
-        exec(F"Status{r}6=IntVar()")
-        exec(F"StatusCKB{r}6=Checkbutton(table,text='Available',variable=Status{r}6)")
+        #exec(F"Status{r}6=IntVar()")
+        exec(F"StatusCKB{r}6=Checkbutton(table,text=f'Available{r}')")
         #if int(list(totalD.items())[0][1]['Available']):
         #print(int(list(totalD.items())[0][1]['Available']))
         exec(F"StatusCKB{r}6.grid(row={r},column=6)")
-        exec(F"StatusCKB{r}6.select()")
+        #exec(F"StatusCKB{r}6.select()")
         VISIBLE.append(eval(F"[X{r}0,X{r}1,X{r}2,X{r}3,X{r}4,X{r}5]"))
+        exec(F"CKBs.append(StatusCKB{r}6)")
     global visiblecontent
     visiblecontent=StringVar(table)
     Label(table,textvariable=visiblecontent).grid(row=23,column=4,columnspan=2,sticky='NW')
@@ -238,7 +241,7 @@ def swapState(Button):
     else: Button['text']=f"{Button['text']}↑"
     sortData(Button)
 
-def sortData(button='all'):
+def sortData(button='all',update=True):
     global sorters
     global Activedata
     if button=='all':
@@ -256,12 +259,13 @@ def sortData(button='all'):
         Activedata=sorted(Activedata,key=lambda x: float(x[button['text'][:-1]]),reverse=True if button['text'].endswith('↑') else False)
     elif button['text'][-1] in ['↓','↑'] and button['text'][:-1] in ['Date']:
         Activedata=sorted(Activedata,key=lambda x: Datefromdate(x['Date']),reverse=True if button['text'].endswith('↑') else False)
-    updateVData(filt=False)
+    if update: updateVData(filt=False)
 
 def updateVData(data=None,filt=True):
     global visiblecontent
     global nav
-    if filt: FILTERDATA()
+    global CKBs
+    if filt: FILTERDATA(so=True,update=False)
     for row in VISIBLE:
         for box in row:
             box.delete('1.0',END)
@@ -277,6 +281,17 @@ def updateVData(data=None,filt=True):
                 print(Activedata)
                 print(col)
                 return
+        try:
+            if int(Activedata[VISIBLE.index(row)+nav]['Available']):
+                CKBs[VISIBLE.index(row)].select()
+            else:
+                CKBs[VISIBLE.index(row)].deselect()
+        except IndexError:
+            continue
+        except ValueError:
+            print('valueerror')
+            print(Activedata[VISIBLE.index(row)+nav]['Available'])
+            
     listofvis=[ID['Sno'] for ID in Activedata]
     try:
         mini=str(int(listofvis.index(VISIBLE[0][0].get('1.0',END).strip('\n')))+1)
@@ -290,39 +305,8 @@ def updateVData(data=None,filt=True):
         except ValueError:
             maxi='0'
     visiblecontent.set(F"{mini}-{maxi} of {len(Activedata)}")
-    
-def gds(arg):
-    lis=[]
-    for row in arg:
-        lis.append(list(map(lambda x: x.get('1.0',END),row)))
-    return lis
 
-def pgUp(arg=None):
-    global nav
-    listofvis=[ID['Sno'] for ID in Activedata]
-    try:
-        mini=int(listofvis.index(VISIBLE[0][0].get('1.0',END).strip('\n')))
-    except ValueError:
-        mini=0
-    if mini<=0: return
-    nav-=15
-    updateVData(filt=False)
-
-def pgDown(arg=None):
-    global nav
-    listofvis=[ID['Sno'] for ID in Activedata]
-    try:
-        maxi=int(listofvis.index(VISIBLE[-1][0].get('1.0',END).strip('\n')))
-    except ValueError:
-        try:
-            maxi=int(listofvis.index(VISIBLE[gds(VISIBLE).index(['\n']*6)-1][0].get('1.0',END).strip('\n')))+1
-        except ValueError:
-            maxi=0
-    if maxi>=len(listofvis): return
-    nav+=15
-    updateVData(filt=False)
-
-def FILTERDATA():
+def FILTERDATA(so=True,update=True):
     global FilterTitle
     global FilterID
     global FilterAuthor
@@ -353,7 +337,43 @@ def FILTERDATA():
         except IndexError as e:
             data=dict(filter(lambda x: FilterDate.get().lower() in x['Date'].lower(),data))
     Activedata=list(data)
-    sortData('all')
+    if not so: sortData('all',update=update)
+    else:
+        global sorters
+        for k,v in sorters.items():
+            if not k.startswith('Sno'):
+                sorters[k]['text']=''.join(char for char in v['text'] if char.isalpha())
+
+def gds(arg):
+    lis=[]
+    for row in arg:
+        lis.append(list(map(lambda x: x.get('1.0',END),row)))
+    return lis
+
+def pgUp(arg=None):
+    global nav
+    listofvis=[ID['Sno'] for ID in Activedata]
+    try:
+        mini=int(listofvis.index(VISIBLE[0][0].get('1.0',END).strip('\n')))
+    except ValueError:
+        mini=0
+    if mini<=0: return
+    nav-=15
+    updateVData(filt=False)
+
+def pgDown(arg=None):
+    global nav
+    listofvis=[ID['Sno'] for ID in Activedata]
+    try:
+        maxi=int(listofvis.index(VISIBLE[-1][0].get('1.0',END).strip('\n')))
+    except ValueError:
+        try:
+            maxi=int(listofvis.index(VISIBLE[gds(VISIBLE).index(['\n']*6)-1][0].get('1.0',END).strip('\n')))+1
+        except ValueError:
+            maxi=0
+    if maxi>=len(listofvis): return
+    nav+=15
+    updateVData(filt=False)
 
 def Datefromdate(s):
     try:
