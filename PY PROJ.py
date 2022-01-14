@@ -218,7 +218,7 @@ def MainFrame(arg=None):
         exec(F"X{r}5.grid(row={r},column=5,sticky='NEW')")
 
         #exec(F"Status{r}6=IntVar()")
-        exec(F"StatusCKB{r}6=Checkbutton(table,text=f'Available{r}')")
+        exec(F"StatusCKB{r}6=Checkbutton(table,text=f'Available')")
         #if int(list(totalD.items())[0][1]['Available']):
         #print(int(list(totalD.items())[0][1]['Available']))
         exec(F"StatusCKB{r}6.grid(row={r},column=6)")
@@ -261,6 +261,14 @@ def sortData(button='all',update=True):
         Activedata=sorted(Activedata,key=lambda x: Datefromdate(x['Date']),reverse=True if button['text'].endswith('↑') else False)
     if update: updateVData(filt=False)
 
+def output(box,text):
+    box.configure(state='normal')
+    if text=='delete':
+        box.delete('1.0',END)
+    else:
+        box.insert(INSERT,text)
+    box.configure(state='disabled')
+
 def updateVData(data=None,filt=True):
     global visiblecontent
     global nav
@@ -268,10 +276,10 @@ def updateVData(data=None,filt=True):
     if filt: FILTERDATA(so=True,update=False)
     for row in VISIBLE:
         for box in row:
-            box.delete('1.0',END)
+            output(box,'delete')
         for r,col in zip(list(range(0,6)),['Sno','Title','Author','Rating','Publisher','Date']):
             try:
-                row[r].insert(INSERT,Activedata[VISIBLE.index(row)+nav][col])
+                output(row[r],Activedata[VISIBLE.index(row)+nav][col])
             except IndexError as e:
                 continue
             except ValueError as e:
