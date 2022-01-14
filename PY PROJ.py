@@ -76,9 +76,9 @@ def loaddata(file='BOOKDATA.csv',pb=None):
             except Exception as e:
                 print(e)
                 print(row)
-    d={}
+    d=[]
     for row in rows:
-        d[row[0]]={'ID':row[0],'Title':row[1],'Author':row[2],'Rating':row[3],'Date':row[4],'Publisher':row[5],'Available':row[6]}
+        d.append({'Sno':row[0],'Title':row[1],'Author':row[2],'Rating':row[3],'Date':row[4],'Publisher':row[5],'Available':row[6]})
     return d
 
 app = Tk()
@@ -87,6 +87,7 @@ frame.grid(column=0,row=0,sticky=(N,W,E,S))
 app.columnconfigure(0,weight=1)
 app.rowconfigure(0,weight=1)
 #msgbox=messagebox.showwarning('title','message')
+
 def RegisterFrame(arg=None):
     app.unbind('<Return>')
     global STATE
@@ -122,6 +123,7 @@ def MainFrame(arg=None):
     global FilterRating
     global FilterDate
     global FilterPublisher
+    global table
     FilterID=StringVar(frame)
     FilterTitle=StringVar(frame)
     FilterAuthor=StringVar(frame)
@@ -171,20 +173,29 @@ def MainFrame(arg=None):
     Label(frame,text='Date :').grid(row=1,column=4,sticky=W)
     Entry(frame,textvariable=FilterDate,width=35).grid(row=1,column=5,padx=1,sticky=W)
     #Page Up/Down
-    PGUP=Button(frame,text='PgUp',height=1,width=5).grid(row=0,column=6,sticky=W)
+    PGUP=Button(frame,text='PgUp',height=1,width=5,command=pgUp).grid(row=0,column=6,sticky=W)
     #PGDN=Button(frame,image=ImageTk.PhotoImage(Image.open('pgdn.png')),height=1,width=4).grid(row=1,column=6,sticky=W)
-    PGDN=Button(frame,text='PgDn',height=1,width=5).grid(row=1,column=6,sticky=W)
+    PGDN=Button(frame,text='PgDn',height=1,width=5,command=pgDown).grid(row=1,column=6,sticky=W)
 
     #TABLE
     table=Frame(frame,height=443)
     table.grid(row=2,column=0,sticky=NSEW,columnspan=7,padx=5,pady=4)
+    #sorters
+    global sorters
+    TableBBID=Button(table,text='Sno↓',command=lambda: swapState(TableBBID),width=6)
+    TableBBID.grid(row=0,column=0,sticky=W)
+    TableBTitle=Button(table,text='Title',width=50,command=lambda: swapState(TableBTitle))
+    TableBTitle.grid(row=0,column=1,sticky=W)
+    TableBAuthor=Button(table,text='Author',command=lambda: swapState(TableBAuthor),width=20)
+    TableBAuthor.grid(row=0,column=2,sticky=W)
+    TableBRating=Button(table,text='Rating',command=lambda: swapState(TableBRating),width=5)
+    TableBRating.grid(row=0,column=3,sticky=W)
+    TableBPublisher=Button(table,text='Publisher',command=lambda: swapState(TableBPublisher),width=20)
+    TableBPublisher.grid(row=0,column=4,sticky=W)
+    TableBDate=Button(table,text='Date',command=lambda: swapState(TableBDate),width=8)
+    TableBDate.grid(row=0,column=5,sticky=W)
+    sorters={'Sno':TableBBID,'Title':TableBTitle,'Author':TableBAuthor,'Rating':TableBRating,'Publisher':TableBPublisher,'Date':TableBDate}
 
-    TableBBID=Button(table,text='Sno↓↑',width=6).grid(row=0,column=0,sticky=W)
-    TableBTitle=Button(table,text='Title',width=50).grid(row=0,column=1,sticky=W)
-    TableBAuthor=Button(table,text='Author',width=20).grid(row=0,column=2,sticky=W)
-    TableBRating=Button(table,text='Rating↓',width=5).grid(row=0,column=3,sticky=W)
-    TableBPublisher=Button(table,text='Publisher',width=20).grid(row=0,column=4,sticky=W)
-    TableBDate=Button(table,text='Date',width=8).grid(row=0,column=5,sticky=W)
     #Search
     Search=Button(table,text="Search",height=1,width=8,command=updateVData).grid(row=0,column=6,padx=4,sticky="NSW")
 
@@ -192,22 +203,16 @@ def MainFrame(arg=None):
     VISIBLE=[]
     for r in range(1,16):
         exec(F"X{r}0=Text(table,height=1,width=6)")
-        #exec(F"X{r}0.insert(INSERT,list(totalD.items())[0][1]['ID'])")
         exec(F"X{r}0.grid(row={r},column=0,sticky='NEW')")
         exec(F"X{r}1=Text(table,height=1,width=40)")
-        #exec(F"X{r}1.insert(INSERT,list(totalD.items())[0][1]['Title'])")
         exec(F"X{r}1.grid(row={r},column=1,sticky='NEW')")
         exec(F"X{r}2=Text(table,height=1,width=15)")
-        #exec(F"X{r}2.insert(INSERT,list(totalD.items())[0][1]['Author'])")
         exec(F"X{r}2.grid(row={r},column=2,sticky='NEW')")
         exec(F"X{r}3=Text(table,height=1,width=5)")
-        #exec(F"X{r}3.insert(INSERT,list(totalD.items())[0][1]['Rating'])")
         exec(F"X{r}3.grid(row={r},column=3,sticky='NEW')")
         exec(F"X{r}4=Text(table,height=1,width=15)")
-        #exec(F"X{r}4.insert(INSERT,list(totalD.items())[0][1]['Publisher'])")
         exec(F"X{r}4.grid(row={r},column=4,sticky='NEW')")
         exec(F"X{r}5=Text(table,height=1,width=8,font=font.Font(family='Helvetica',name='Date Font',size=9))")
-        #exec(F"X{r}5.insert(INSERT,list(totalD.items())[0][1]['Date'])")
         exec(F"X{r}5.grid(row={r},column=5,sticky='NEW')")
 
         exec(F"Status{r}6=IntVar()")
@@ -217,49 +222,138 @@ def MainFrame(arg=None):
         exec(F"StatusCKB{r}6.grid(row={r},column=6)")
         exec(F"StatusCKB{r}6.select()")
         VISIBLE.append(eval(F"[X{r}0,X{r}1,X{r}2,X{r}3,X{r}4,X{r}5]"))
-    updateVData()        
+    global visiblecontent
+    visiblecontent=StringVar(table)
+    Label(table,textvariable=visiblecontent).grid(row=23,column=4,columnspan=2,sticky='NW')
+    global Activedata
+    Activedata=totalD
+    updateVData()
     app.bind('<Return>',updateVData)
-    Label(table,text='X-X+15 of 200').grid(row=23,column=4,columnspan=2,sticky='NW')
-    
-def updateVData(data=None):
-    UPDATEDATA()
+    app.bind('<Prior>',pgUp)
+    app.bind('<Next>',pgDown)
+
+def swapState(Button):
+    if Button['text'].endswith('↑'): Button['text']=f"{Button['text'][:-1]}↓"
+    elif Button['text'].endswith('↓'): Button['text']=f"{Button['text'][:-1]}"
+    else: Button['text']=f"{Button['text']}↑"
+    sortData(Button)
+
+def sortData(button='all'):
+    global sorters
+    global Activedata
+    if button=='all':
+        for s,button in sorters.items():
+            if button['text'][-1] in ['↓','↑'] and button['text'][:-1] in ['Title','Author','Publisher']:
+                Activedata=sorted(Activedata,key=lambda x: x[button['text'][:-1]],reverse=True if button['text'].endswith('↑') else False)
+            elif button['text'][-1] in ['↓','↑'] and button['text'][:-1] in ['Sno','Rating']:
+                Activedata=sorted(Activedata,key=lambda x: float(x[button['text'][:-1]]),reverse=True if button['text'].endswith('↑') else False)
+            elif button['text'][-1] in ['↓','↑'] and button['text'][:-1] in ['Date']:
+                Activedata=sorted(Activedata,key=lambda x: Datefromdate(x['Date']),reverse=True if button['text'].endswith('↑') else False)
+
+    if button['text'][-1] in ['↓','↑'] and button['text'][:-1] in ['Title','Author','Publisher']:
+        Activedata=sorted(Activedata,key=lambda x: x[button['text'][:-1]],reverse=True if button['text'].endswith('↑') else False)
+    elif button['text'][-1] in ['↓','↑'] and button['text'][:-1] in ['Sno','Rating']:
+        Activedata=sorted(Activedata,key=lambda x: float(x[button['text'][:-1]]),reverse=True if button['text'].endswith('↑') else False)
+    elif button['text'][-1] in ['↓','↑'] and button['text'][:-1] in ['Date']:
+        Activedata=sorted(Activedata,key=lambda x: Datefromdate(x['Date']),reverse=True if button['text'].endswith('↑') else False)
+    updateVData(filt=False)
+
+def updateVData(data=None,filt=True):
+    global visiblecontent
+    global nav
+    if filt: FILTERDATA()
     for row in VISIBLE:
         for box in row:
             box.delete('1.0',END)
-        for r,col in zip(list(range(0,6)),['ID','Title','Author','Rating','Publisher','Date']):
+        for r,col in zip(list(range(0,6)),['Sno','Title','Author','Rating','Publisher','Date']):
             try:
-                row[r].insert(INSERT,list(Activedata.items())[VISIBLE.index(row)][1][col])
+                row[r].insert(INSERT,Activedata[VISIBLE.index(row)+nav][col])
             except IndexError as e:
                 continue
+            except ValueError as e:
+                continue
+            except KeyError as e:
+                print(r)
+                print(Activedata)
+                print(col)
+                return
+    listofvis=[ID['Sno'] for ID in Activedata]
+    try:
+        mini=str(int(listofvis.index(VISIBLE[0][0].get('1.0',END).strip('\n')))+1)
+    except ValueError:
+        mini='0'
+    try:
+        maxi=str(int(listofvis.index(VISIBLE[-1][0].get('1.0',END).strip('\n')))+1)
+    except ValueError:
+        try:
+            maxi=str(int(listofvis.index(VISIBLE[gds(VISIBLE).index(['\n']*6)-1][0].get('1.0',END).strip('\n')))+1)
+        except ValueError:
+            maxi='0'
+    visiblecontent.set(F"{mini}-{maxi} of {len(Activedata)}")
+    
+def gds(arg):
+    lis=[]
+    for row in arg:
+        lis.append(list(map(lambda x: x.get('1.0',END),row)))
+    return lis
 
-def UPDATEDATA():
+def pgUp(arg=None):
+    global nav
+    listofvis=[ID['Sno'] for ID in Activedata]
+    try:
+        mini=int(listofvis.index(VISIBLE[0][0].get('1.0',END).strip('\n')))
+    except ValueError:
+        mini=0
+    if mini<=0: return
+    nav-=15
+    updateVData(filt=False)
+
+def pgDown(arg=None):
+    global nav
+    listofvis=[ID['Sno'] for ID in Activedata]
+    try:
+        maxi=int(listofvis.index(VISIBLE[-1][0].get('1.0',END).strip('\n')))
+    except ValueError:
+        try:
+            maxi=int(listofvis.index(VISIBLE[gds(VISIBLE).index(['\n']*6)-1][0].get('1.0',END).strip('\n')))+1
+        except ValueError:
+            maxi=0
+    if maxi>=len(listofvis): return
+    nav+=15
+    updateVData(filt=False)
+
+def FILTERDATA():
     global FilterTitle
     global FilterID
     global FilterAuthor
     global FilterRating
     global FilterDate
     global FilterPublisher
-    data=totalD
+    global nav
+    global Activedata
+    nav=0
+    if len(Activedata)!=len(totalD): data=totalD
+    else: data=totalD
     if FilterID.get()!='':
-        data=dict(filter(lambda x: int(x[1]['ID'])==int(FilterID.get()),data.items()))
+        data=list(filter(lambda x: int(x['Sno'])==int(FilterID.get()),data))
     if FilterTitle.get()!='':
-        data=dict(filter(lambda x: FilterTitle.get().lower() in x[1]['Title'].lower(),data.items()))
+        data=list(filter(lambda x: FilterTitle.get().lower() in x['Title'].lower(),data))
     if FilterAuthor.get()!='':
-        data=dict(filter(lambda x: FilterAuthor.get().lower() in x[1]['Author'].lower(),data.items()))
+        data=list(filter(lambda x: FilterAuthor.get().lower() in x['Author'].lower(),data))
     if FilterRating.get()!='':
-        Rating=float(''.join([char for char in FilterRating.get() if char.isdigit()]))
-        data=dict(filter(lambda x: Rating>float(x[1]['Rating']) if FilterRating.get().startswith('<') or FilterRating.get().endswith('-') or FilterRating.get().startswith('-') else Rating<float(x[1]['Rating']) if FilterRating.get().startswith('>') or FilterRating.get().startswith('+') or FilterRating.get().endswith('+') else Rating==float(x[1]['Rating']),data.items()))
+        Rating=float(''.join([char for char in FilterRating.get() if char in list(map(str,list(range(0,10))))+['.']]))
+        data=list(filter(lambda x: Rating>float(x['Rating']) if FilterRating.get().startswith('<') or FilterRating.get().endswith('-') or FilterRating.get().startswith('-') else Rating<float(x['Rating']) if FilterRating.get().startswith('>') or FilterRating.get().startswith('+') or FilterRating.get().endswith('+') else Rating==float(x['Rating']),data))
     if FilterPublisher.get()!='':
-        data=dict(filter(lambda x: FilterPublisher.get().lower() in x[1]['Publisher'].lower(),data.items()))
+        data=list(filter(lambda x: FilterPublisher.get().lower() in x['Publisher'].lower(),data))
     if FilterDate.get()!='':
         try:
             date=Datefromdate(''.join([char for char in FilterDate.get() if char in list(map(str,list(range(0,10))))+['/']]))
             if date==None: return
-            data=dict(filter(lambda x: date>Datefromdate(x[1]['Date']) if FilterDate.get().startswith('<') or FilterDate.get().endswith('-') or FilterDate.get().startswith('-') else date<Datefromdate(x[1]['Date']) if FilterDate.get().startswith('>') or FilterDate.get().startswith('+') or FilterDate.get().endswith('+') else date==Datefromdate(x[1]['Date'].strip()),data.items()))
+            data=dict(filter(lambda x: date>Datefromdate(x['Date']) if FilterDate.get().startswith('<') or FilterDate.get().endswith('-') or FilterDate.get().startswith('-') else date<Datefromdate(x['Date']) if FilterDate.get().startswith('>') or FilterDate.get().startswith('+') or FilterDate.get().endswith('+') else date==Datefromdate(x['Date'].strip()),data))
         except IndexError as e:
-            data=dict(filter(lambda x: FilterDate.get().lower() in x[1]['Date'].lower(),data.items()))
-    global Activedata
-    Activedata=data
+            data=dict(filter(lambda x: FilterDate.get().lower() in x['Date'].lower(),data))
+    Activedata=list(data)
+    sortData('all')
 
 def Datefromdate(s):
     try:
