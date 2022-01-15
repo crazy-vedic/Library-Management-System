@@ -41,7 +41,6 @@ def call(link):
         start = time.time()
         count=0
     r = requests.post(link)
-    #print('new',link)
     library[link]=(r,time.time())
     if r.status_code == 429:
         print(F"You are being rate limited. Please close the app for 60 seconds then try again.")
@@ -68,10 +67,9 @@ def loaddata(file='BOOKDATA.csv',pb=None):
         quan=len(reader)
         for row in reader:
             try:
-                #if reader.index(row)%50==0:#ENABLE PROGRESSBAR
-                #    pb['value']=(reader.index(row)/quan)*100
-                #    app.update()
-                #    pass
+                if reader.index(row)%200==0:#ENABLE PROGRESSBAR
+                    pb['value']=(reader.index(row)/quan)*100
+                    app.update()
                 rows.append(row)
             except Exception as e:
                 print(e)
@@ -86,7 +84,6 @@ frame=ttk.Frame(app,padding='5 1 5 5')
 frame.grid(column=0,row=0,sticky=(N,W,E,S))
 app.columnconfigure(0,weight=1)
 app.rowconfigure(0,weight=1)
-#msgbox=messagebox.showwarning('title','message')
 
 def RegisterFrame(arg=None):
     app.unbind('<Return>')
@@ -151,24 +148,29 @@ def MainFrame(arg=None):
     app.unbind('<Return>')
     app.title("Library Management Tool")
     app.geometry(F"912x480")
-    #AdminPEntry.bind('<KeyRelease>',ADMPASS)
     #ID
     Label(frame,text='Book ID :').grid(row=0,column=0,sticky=W)
-    Entry(frame,textvariable=FilterID,width=5).grid(row=0,column=1,sticky=W)
+    BK=Entry(frame,textvariable=FilterID,width=5)
+    BK.grid(row=0,column=1,sticky=W)
     #Title
     Label(frame,text='Title :').grid(row=0,column=2,sticky=W)
     TITLETEMP=Entry(frame,textvariable=FilterTitle,width=60)
     TITLETEMP.grid(row=0,column=3,padx=1,sticky=W)
+    TITLETEMP.bind('<KeyRelease>',updateVData)
     TITLETEMP.focus()
     #Author
     Label(frame,text='Author :').grid(row=0,column=4,sticky=W)
-    Entry(frame,textvariable=FilterAuthor,width=35).grid(row=0,column=5,padx=1,sticky=W)
+    AUTHORTEMP=Entry(frame,textvariable=FilterAuthor,width=35)
+    AUTHORTEMP.grid(row=0,column=5,padx=1,sticky=W)
+    AUTHORTEMP.bind('<KeyRelease>',updateVData)
     #Rating
     Label(frame,text='Rating :').grid(row=1,column=0,sticky=W)
     Entry(frame,textvariable=FilterRating,width=5).grid(row=1,column=1,padx=1,pady=3,sticky=W)
     #Publisher
     Label(frame,text='Publisher :').grid(row=1,column=2,sticky=W)
-    Entry(frame,textvariable=FilterPublisher,width=60).grid(row=1,column=3,padx=1,sticky=W)
+    PUBLISHERTEMP=Entry(frame,textvariable=FilterPublisher,width=60)
+    PUBLISHERTEMP.grid(row=1,column=3,padx=1,sticky=W)
+    PUBLISHERTEMP.bind('<KeyRelease>',updateVData)
     #Date
     Label(frame,text='Date :').grid(row=1,column=4,sticky=W)
     Entry(frame,textvariable=FilterDate,width=35).grid(row=1,column=5,padx=1,sticky=W)
@@ -217,14 +219,11 @@ def MainFrame(arg=None):
         exec(F"X{r}5=Text(table,height=1,width=8,font=font.Font(family='Helvetica',name='Date Font',size=9))")
         exec(F"X{r}5.grid(row={r},column=5,sticky='NEW')")
 
-        #exec(F"Status{r}6=IntVar()")
-        exec(F"StatusCKB{r}6=Checkbutton(table,text=f'Available')")
-        #if int(list(totalD.items())[0][1]['Available']):
-        #print(int(list(totalD.items())[0][1]['Available']))
-        exec(F"StatusCKB{r}6.grid(row={r},column=6)")
-        #exec(F"StatusCKB{r}6.select()")
+        exec(F"SCKB{r}6=IntVar(table)")
+        exec(F"CKB{r}6=Checkbutton(table,text=f'Available',variable=SCKB{r}6)")
+        exec(F"CKB{r}6.grid(row={r},column=6)")
         VISIBLE.append(eval(F"[X{r}0,X{r}1,X{r}2,X{r}3,X{r}4,X{r}5]"))
-        exec(F"CKBs.append(StatusCKB{r}6)")
+        exec(F"CKBs.append(SCKB{r}6)")
     global visiblecontent
     visiblecontent=StringVar(table)
     Label(table,textvariable=visiblecontent).grid(row=23,column=4,columnspan=2,sticky='NW')
@@ -269,11 +268,16 @@ def output(box,text):
         box.insert(INSERT,text)
     box.configure(state='disabled')
 
-def updateVData(data=None,filt=True):
+#def updateAvailability
+
+def updateVData(key=None,filt=True):
     global visiblecontent
     global nav
     global CKBs
-    if filt: FILTERDATA(so=True,update=False)
+    if hasattr(key,'keycode'):
+        if not key.keycode in list(range(65,91))+list(range(48,58))+list(range(96,106))+list(range(36,41))+list(range(112,124))+[188,190,192,222,189,20,8,32,16,44,36,109,110,187,19,13]:
+            return
+    if filt: FILTERDATA(so=False,update=False)
     for row in VISIBLE:
         for box in row:
             output(box,'delete')
@@ -291,9 +295,10 @@ def updateVData(data=None,filt=True):
                 return
         try:
             if int(Activedata[VISIBLE.index(row)+nav]['Available']):
-                CKBs[VISIBLE.index(row)].select()
+                CKBs[VISIBLE.index(row)].set(1)
             else:
-                CKBs[VISIBLE.index(row)].deselect()
+                CKBs[VISIBLE.index(row)].set(0)
+            print(CKBs[VISIBLE.index(row)].get())
         except IndexError:
             continue
         except ValueError:
@@ -338,14 +343,17 @@ def FILTERDATA(so=True,update=True):
     if FilterPublisher.get()!='':
         data=list(filter(lambda x: FilterPublisher.get().lower() in x['Publisher'].lower(),data))
     if FilterDate.get()!='':
+        if ''.join([char for char in FilterDate.get() if char.isalpha()])!='':
+            messagebox.showerror("Filter Format Error","Date entered is of a bad format")
+            return
         try:
             date=Datefromdate(''.join([char for char in FilterDate.get() if char in list(map(str,list(range(0,10))))+['/']]))
             if date==None: return
-            data=dict(filter(lambda x: date>Datefromdate(x['Date']) if FilterDate.get().startswith('<') or FilterDate.get().endswith('-') or FilterDate.get().startswith('-') else date<Datefromdate(x['Date']) if FilterDate.get().startswith('>') or FilterDate.get().startswith('+') or FilterDate.get().endswith('+') else date==Datefromdate(x['Date'].strip()),data))
+            data=list(filter(lambda x: date>Datefromdate(x['Date']) if FilterDate.get().startswith('<') or FilterDate.get().endswith('-') or FilterDate.get().startswith('-') else date<Datefromdate(x['Date']) if FilterDate.get().startswith('>') or FilterDate.get().startswith('+') or FilterDate.get().endswith('+') else date==Datefromdate(x['Date'].strip()),data))
         except IndexError as e:
-            data=dict(filter(lambda x: FilterDate.get().lower() in x['Date'].lower(),data))
+            data=list(filter(lambda x: FilterDate.get().lower() in x['Date'].lower(),data))
     Activedata=list(data)
-    if not so: sortData('all',update=update)
+    if so: sortData('all',update=update)
     else:
         global sorters
         for k,v in sorters.items():
@@ -458,15 +466,13 @@ def WelcomeFrame(arg=None):
     userEntry=Entry(frame,textvariable=Pass,show="*").grid(row=2,column=2)
     #Register=ImageTk.PhotoImage(Image.open("register.png"))
     REGISTER=Button(frame,text='Register',font=font.Font(family='Helvetica',name='Register Button Font',size=8),command=RegisterFrame).grid(row=3,column=1,sticky=NSEW)
-    #REGISTER['font']=font.Font(family='Helvetica',name='Register Button Font',size=8)
-    #REGISTER.grid(row=3,column=1)
     PASSCHECK=Button(frame,activebackground='#00FFFF',bg='#00FFFF',text="Next",command=MainFrame)
     PASSCHECK.grid(row=3,column=2,sticky=NSEW)
     for child in frame.winfo_children():
         child.grid_configure(padx=5, pady=5)
     app.bind('<Return>',MainFrame)
-    User.set('Vedic')######################
-    Pass.set('Pass')#######################
+    User.set('Vedic')######################DELETE
+    Pass.set('Pass')#######################DELETE
 
 #app.iconphoto(False, PhotoImage(file=resource_path('icon.png')))
 
