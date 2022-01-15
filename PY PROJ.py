@@ -58,7 +58,7 @@ screenshots of the responses by the app to show them, and note what you were doi
     return r
 
 @lru_cache(maxsize=50)
-def loaddata(file='BOOKDATA.csv',pb=None):
+def loaddata(file='BOOKDATA.csv',pb=None,raw=False):
     with open(file,encoding='utf-8') as f:
         rows=[]
         reader=csv.reader(f)
@@ -67,16 +67,20 @@ def loaddata(file='BOOKDATA.csv',pb=None):
         quan=len(reader)
         for row in reader:
             try:
-                if reader.index(row)%200==0:#ENABLE PROGRESSBAR
-                    pb['value']=(reader.index(row)/quan)*100
-                    app.update()
                 rows.append(row)
+                if pb!=None:
+                    if reader.index(row)%200==0:#ENABLE PROGRESSBAR
+                        pb['value']=(reader.index(row)/quan)*100
+                        app.update()
             except Exception as e:
                 print(e)
                 print(row)
-    d=[]
-    for row in rows:
-        d.append({'Sno':row[0],'Title':row[1],'Author':row[2],'Rating':row[3],'Date':row[4],'Publisher':row[5],'Available':row[6]})
+    if not raw:
+        d=[]
+        for row in rows:
+            d.append({'Sno':row[0],'Title':row[1],'Author':row[2],'Rating':row[3],'Date':row[4],'Publisher':row[5],'Available':row[6]})
+    else:
+        d=rows
     return d
 
 app = Tk()
@@ -184,8 +188,8 @@ def MainFrame(arg=None):
     table.grid(row=2,column=0,sticky=NSEW,columnspan=7,padx=5,pady=4)
     #sorters
     global sorters
-    TableBBID=Button(table,text='Sno↓',command=lambda: swapState(TableBBID),width=6)
-    TableBBID.grid(row=0,column=0,sticky=W)
+    TableBSno=Button(table,text='Sno↓',command=lambda: swapState(TableBSno),width=6)
+    TableBSno.grid(row=0,column=0,sticky=W)
     TableBTitle=Button(table,text='Title',width=50,command=lambda: swapState(TableBTitle))
     TableBTitle.grid(row=0,column=1,sticky=W)
     TableBAuthor=Button(table,text='Author',command=lambda: swapState(TableBAuthor),width=20)
@@ -196,8 +200,7 @@ def MainFrame(arg=None):
     TableBPublisher.grid(row=0,column=4,sticky=W)
     TableBDate=Button(table,text='Date',command=lambda: swapState(TableBDate),width=8)
     TableBDate.grid(row=0,column=5,sticky=W)
-    sorters={'Sno':TableBBID,'Title':TableBTitle,'Author':TableBAuthor,'Rating':TableBRating,'Publisher':TableBPublisher,'Date':TableBDate}
-
+    sorters={'Sno':TableBSno,'Title':TableBTitle,'Author':TableBAuthor,'Rating':TableBRating,'Publisher':TableBPublisher,'Date':TableBDate}
     #Search
     Search=Button(table,text="Search",height=1,width=8,command=updateVData).grid(row=0,column=6,padx=4,sticky="NSW")
 
@@ -219,8 +222,9 @@ def MainFrame(arg=None):
         exec(F"X{r}5=Text(table,height=1,width=8,font=font.Font(family='Helvetica',name='Date Font',size=9))")
         exec(F"X{r}5.grid(row={r},column=5,sticky='NEW')")
 
-        exec(F"SCKB{r}6=IntVar(table)")
-        exec(F"CKB{r}6=Checkbutton(table,text=f'Available',variable=SCKB{r}6)")
+        exec(F"SCKB{r}6=IntVar(table,name='CKB{r}')")
+        exec(F"global CKB{r}6")
+        exec(F"CKB{r}6=Checkbutton(table,text=f'Available',variable=SCKB{r}6,command=lambda: updateAvailability(CKBs[{r}-1]))")
         exec(F"CKB{r}6.grid(row={r},column=6)")
         VISIBLE.append(eval(F"[X{r}0,X{r}1,X{r}2,X{r}3,X{r}4,X{r}5]"))
         exec(F"CKBs.append(SCKB{r}6)")
@@ -262,20 +266,60 @@ def sortData(button='all',update=True):
 
 def output(box,text):
     box.configure(state='normal')
-    if text=='delete':
+    if text.lower()=='delete':
         box.delete('1.0',END)
     else:
         box.insert(INSERT,text)
     box.configure(state='disabled')
 
-#def updateAvailability
+def updateAvailability(ckb):
+    global VISIBLE
+    global CKBs
+    global totalD
+    global rawd
+    #listofvis=[ID['Sno'] for ID in Activedata]
+    #try:
+    #    maxi=str(int(listofvis.index(VISIBLE[-1][0].get('1.0',END).strip('\n')))+1)
+    #except ValueError:
+    #    try:
+    #        maxi=str(int(listofvis.index(VISIBLE[gds(VISIBLE).index(['\n']*6)-1][0].get('1.0',END).strip('\n')))+1)
+    #    except ValueError:
+    #        maxi='0'
+    #try:
+    #    mini=str(int(listofvis.index(VISIBLE[0][0].get('1.0',END).strip('\n')))+1)
+    #except ValueError:
+    #    mini='0'
+    ogshown=[]
+    for row in VISIBLE:
+        if '\n' in gds(row,squared=False)[0]:
+            break
+        ogshown.append(list(filter(lambda x: int(x['Sno'])==int(row[0].get('1.0',END)),totalD))[0])#Get original data of everything shown
+
+    else:
+        idex=int(ckb._name.split('B')[1])
+        og=ogshown[int(idex)-1]
+        rawd=loaddata(raw=True)
+        try:
+            index=rawd.index(list(filter(lambda x: int(og['Sno'])==int(x[0]),rawd))[0])
+        except ValueError:
+            index=rawd.index(list(filter(lambda x: int(og['Sno'])==int(x[0]),rawd[1:]))[0])
+        #print(F"{rawd[index][0]}: {rawd[index][6]}",end='->')
+        rawd[index][6]='1' if rawd[index][6]=='0' else '0'
+        #print(F"{rawd[index][6]} ({'1' if rawd[index][6]=='0' else '0'})")
+        rows=rawd
+        if not rows[0]==['bookID','title','authors','average_rating','publication_date','publisher','Availability']: rows.insert(0,['bookID','title','authors','average_rating','publication_date','publisher','Availability'])
+        with open('BOOKDATA.csv','w',encoding='utf-8',newline='') as f:
+            writer=csv.writer(f)
+            #print(rows[index])
+            writer.writerows(rows)
+        totalD=loaddata()
 
 def updateVData(key=None,filt=True):
     global visiblecontent
     global nav
     global CKBs
     if hasattr(key,'keycode'):
-        if not key.keycode in list(range(65,91))+list(range(48,58))+list(range(96,106))+list(range(36,41))+list(range(112,124))+[188,190,192,222,189,20,8,32,16,44,36,109,110,187,19,13]:
+        if not key.keycode in list(range(65,91))+list(range(48,58))+list(range(96,106))+list(range(36,41))+[188,190,192,222,189,20,8,32,16,44,36,109,110,187,19,13]:
             return
     if filt: FILTERDATA(so=False,update=False)
     for row in VISIBLE:
@@ -298,7 +342,6 @@ def updateVData(key=None,filt=True):
                 CKBs[VISIBLE.index(row)].set(1)
             else:
                 CKBs[VISIBLE.index(row)].set(0)
-            print(CKBs[VISIBLE.index(row)].get())
         except IndexError:
             continue
         except ValueError:
@@ -360,10 +403,13 @@ def FILTERDATA(so=True,update=True):
             if not k.startswith('Sno'):
                 sorters[k]['text']=''.join(char for char in v['text'] if char.isalpha())
 
-def gds(arg):
+def gds(arg,squared=True):
     lis=[]
-    for row in arg:
-        lis.append(list(map(lambda x: x.get('1.0',END),row)))
+    if squared:
+        for row in arg:
+            lis.append(list(map(lambda x: x.get('1.0',END),row)))
+    else:
+        lis.append(list(map(lambda x: x.get('1.0',END),arg)))
     return lis
 
 def pgUp(arg=None):
