@@ -10,6 +10,7 @@ import configparser
 import pyautogui as gui
 from functools import lru_cache
 import keyboard as kb
+import mysql.connector as con
 import csv
 
 ADM='ADM'
@@ -59,6 +60,21 @@ screenshots of the responses by the app to show them, and note what you were doi
 
 @lru_cache(maxsize=50)
 def loaddata(file='BOOKDATA.csv',pb=None,raw=False):
+    db=con.connect(user='root',password='Vedic',database='library')
+    cur=db.cursor()
+    cur.execute(F"select * from library")
+    alldata,d=cur.fetchall(),[]
+    for item in alldata:
+        try:
+            if pb!=None:
+                if alldata.index(item)%200==0:#ENABLE PROGRESSBAR
+                    pb['value']=(alldata.index(item)/len(alldata))*100
+                    app.update()
+            d.append({'Sno':str(item[0]),'Title':str(item[1]),'Author':str(item[2]),'Rating':str(item[3]),'Date':str(item[4].strftime("%d/%m/%Y")),'Publisher':str(item[5]),'Available':str(item[6])})
+        except Exception as e:
+            print(e)
+    return d
+    '''
     with open(file,encoding='utf-8') as f:
         rows=[]
         reader=csv.reader(f)
@@ -74,7 +90,7 @@ def loaddata(file='BOOKDATA.csv',pb=None,raw=False):
                         app.update()
             except Exception as e:
                 print(e)
-                print(row)
+                pri###nt(row)
     if not raw:
         d=[]
         for row in rows:
@@ -82,6 +98,23 @@ def loaddata(file='BOOKDATA.csv',pb=None,raw=False):
     else:
         d=rows
     return d
+'''
+
+def CSVtoDB(arg=None):
+    data=loaddata()
+    db=con.connect(user='root',password='Vedic',database='library')
+    cur=db.cursor()
+    for line in data:
+        if data.index(line)%100==0:
+            print(data.index(line))
+        try:
+            cur.execute(F"insert into library values({line['Sno']},'{line['Title']}','{line['Author']}',{line['Rating']},'{Datefromdate(line['Date']).strftime('%Y-%m-%d')}','{line['Publisher']}',{line['Available']})")
+        except Exception as e:
+            print(e)
+            print(line)
+    db.commit()
+
+#kb.on_press_key('F7',CSVtoDB)
 
 app = Tk()
 frame=ttk.Frame(app,padding='5 1 5 5')
@@ -236,7 +269,11 @@ def MainFrame(arg=None):
     updateVData()
     app.bind('<Return>',updateVData)
     app.bind('<Prior>',pgUp)
+    app.bind('<Shift-Prior>',lambda x: pgUp(pg=10))
+    app.bind('<Control-Prior>',lambda x: pgUp(pg=100))
     app.bind('<Next>',pgDown)
+    app.bind('<Shift-Next>',lambda x: pgDown(pg=10))
+    app.bind('<Control-Next>',lambda x: pgDown(pg=100))
 
 def swapState(Button):
     if Button['text'].endswith('↑'): Button['text']=f"{Button['text'][:-1]}↓"
@@ -277,18 +314,21 @@ def updateAvailability(ckb):
     global CKBs
     global totalD
     global rawd
-    #listofvis=[ID['Sno'] for ID in Activedata]
-    #try:
-    #    maxi=str(int(listofvis.index(VISIBLE[-1][0].get('1.0',END).strip('\n')))+1)
-    #except ValueError:
-    #    try:
-    #        maxi=str(int(listofvis.index(VISIBLE[gds(VISIBLE).index(['\n']*6)-1][0].get('1.0',END).strip('\n')))+1)
-    #    except ValueError:
-    #        maxi='0'
-    #try:
-    #    mini=str(int(listofvis.index(VISIBLE[0][0].get('1.0',END).strip('\n')))+1)
-    #except ValueError:
-    #    mini='0'
+
+    db=con.connect(user='root',password='Vedic',database='library')
+    cur=db.cursor()
+    ogshown=[]
+    for row in VISIBLE:
+        if '\n' in gds(row,squared=False)[0]:
+            break
+        ogshown.append(list(filter(lambda x: int(x['Sno'])==int(row[0].get('1.0',END)),totalD))[0])#Get original data of everything shown
+    idex=int(ckb._name.split('B')[1])
+    og=ogshown[int(idex)-1]
+    print(og)
+    cur.execute(F"update library set available={'1' if og['Available']=='0' else '0'} where Sno={og['Sno']}")
+    db.commit()
+    return
+    '''
     ogshown=[]
     for row in VISIBLE:
         if '\n' in gds(row,squared=False)[0]:
@@ -313,13 +353,14 @@ def updateAvailability(ckb):
             #print(rows[index])
             writer.writerows(rows)
         totalD=loaddata()
+    '''
 
 def updateVData(key=None,filt=True):
     global visiblecontent
     global nav
     global CKBs
     if hasattr(key,'keycode'):
-        if not key.keycode in list(range(65,91))+list(range(48,58))+list(range(96,106))+list(range(36,41))+[188,190,192,222,189,20,8,32,16,44,36,109,110,187,19,13]:
+        if not key.keycode in list(range(65,91))+list(range(48,58))+list(range(96,106))+[188,190,192,222,189,8,32,44,36,109,110,187,19,13]:
             return
     if filt: FILTERDATA(so=False,update=False)
     for row in VISIBLE:
@@ -412,41 +453,46 @@ def gds(arg,squared=True):
         lis.append(list(map(lambda x: x.get('1.0',END),arg)))
     return lis
 
-def pgUp(arg=None):
+def pgUp(arg=None,pg=1):
     global nav
     listofvis=[ID['Sno'] for ID in Activedata]
     try:
         mini=int(listofvis.index(VISIBLE[0][0].get('1.0',END).strip('\n')))
     except ValueError:
         mini=0
-    if mini<=0: return
-    nav-=15
+    if mini<=0 or mini-15*int(pg)<0: return
+    nav-=15*int(pg)
     updateVData(filt=False)
 
-def pgDown(arg=None):
+def pgDown(arg=None,pg=1):
     global nav
     listofvis=[ID['Sno'] for ID in Activedata]
     try:
-        maxi=int(listofvis.index(VISIBLE[-1][0].get('1.0',END).strip('\n')))
+        mini=int(listofvis.index(VISIBLE[0][0].get('1.0',END).strip('\n')))
+    except ValueError:
+        mini=0
+    try:
+        maxi=int(listofvis.index(VISIBLE[-1][0].get('1.0',END).strip('\n')))+1
     except ValueError:
         try:
             maxi=int(listofvis.index(VISIBLE[gds(VISIBLE).index(['\n']*6)-1][0].get('1.0',END).strip('\n')))+1
         except ValueError:
             maxi=0
-    if maxi>=len(listofvis): return
-    nav+=15
+    #print(F"{mini+15*int(pg)}  {len(Activedata)}")
+    if maxi>=len(listofvis) or mini+15*int(pg)>len(Activedata): return
+    nav+=15*int(pg)
     updateVData(filt=False)
 
 def Datefromdate(s):
     try:
-        if not int(s.split('/')[0]) in list(range(1,13)):
+        if not int(s.split('/')[1]) in list(range(1,13)):
             messagebox.showerror("Filter Format Error","Month must be 1-12")
             return None
     except Exception as e:
         print(e)
         print(s)
     try:
-        date=datetime(int(s.split('/')[2]),int(s.split('/')[0]),int(s.split('/')[1]))
+        date=datetime(int(s.split('/')[2]),int(s.split('/')[1]),int(s.split('/')[0]))
     except ValueError as e:
         print(s)
         return None
@@ -495,7 +541,7 @@ def fixify(arg=None):
 
 #WELCOME PAGE ON START UP
 def WelcomeFrame(arg=None):
-    app.title("Login Page")
+    app.title("Login")
     app.unbind('<Return>')
     destroyall()
     global STATE
