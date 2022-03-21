@@ -32,73 +32,52 @@ except configparser.ParsingError as e:
 def destroyall(arg=None):
     for child in frame.winfo_children(): child.destroy()
 
-def call(link):
-    global count
-    global start
-    if link in list(library.keys()):
-        if not time.time()-library[link][1]>30:
-            return library[link][0]
-    if count == 0:
-        start = time.time()
-        count=0
-    r = requests.post(link)
-    library[link]=(r,time.time())
-    if r.status_code == 429:
-        print(F"You are being rate limited. Please close the app for 60 seconds then try again.")
-    elif r.status_code == 401 or r.status_code == 403:
-        print(F"You are unauthenticated to get this information from the api, please refresh your key then try again.")
-        return
-    elif r.status_code == 404:
-        print(F"You have recieved a 404 not found error, please speak to a developer and take\
-screenshots of the responses by the app to show them, and note what you were doing when this occured.")
-        return
-    elif r.status_code == 408:
-        print(F"Your request timed out, please speak to a developer.")
-        return
-    count = count + 1
-    return r
-
 @lru_cache(maxsize=50)
-def loaddata(file='BOOKDATA.csv',pb=None,raw=False):
-    db=con.connect(user='root',password='Vedic',database='library')
-    cur=db.cursor()
-    cur.execute(F"select * from library")
-    alldata,d=cur.fetchall(),[]
-    for item in alldata:
-        try:
-            if pb!=None:
-                if alldata.index(item)%200==0:#ENABLE PROGRESSBAR
-                    pb['value']=(alldata.index(item)/len(alldata))*100
-                    app.update()
-            d.append({'Sno':str(item[0]),'Title':str(item[1]),'Author':str(item[2]),'Rating':str(item[3]),'Date':str(item[4].strftime("%d/%m/%Y")),'Publisher':str(item[5]),'Available':str(item[6])})
-        except Exception as e:
-            print(e)
-    return d
-    '''
-    with open(file,encoding='utf-8') as f:
-        rows=[]
-        reader=csv.reader(f)
-        fields=next(reader)
-        reader=list(reader)
-        quan=len(reader)
-        for row in reader:
+def loaddata(file=None,pb=None,raw=False):
+    if file==None:
+        db=con.connect(user='root',password='Vedic',database='library')
+        cur=db.cursor()
+        cur.execute(F"select * from library")
+        alldata,d=cur.fetchall(),[]
+        for item in alldata:
             try:
-                rows.append(row)
                 if pb!=None:
-                    if reader.index(row)%200==0:#ENABLE PROGRESSBAR
-                        pb['value']=(reader.index(row)/quan)*100
+                    if alldata.index(item)%50==0:#ENABLE PROGRESSBAR
+                        #print('pb update')
+                        pb['value']=(alldata.index(item)/len(alldata))*100
                         app.update()
+                d.append({'Sno':str(item[0]),'Title':str(item[1]),'Author':str(item[2]),'Rating':str(item[3]),'Date':str(item[4].strftime("%d/%m/%Y")),'Publisher':str(item[5]),'Available':str(item[6])})
             except Exception as e:
                 print(e)
-                pri###nt(row)
-    if not raw:
-        d=[]
-        for row in rows:
-            d.append({'Sno':row[0],'Title':row[1],'Author':row[2],'Rating':row[3],'Date':row[4],'Publisher':row[5],'Available':row[6]})
+        return d
     else:
-        d=rows
-    return d
-'''
+        try:
+            with open(file,encoding='utf-8') as f:
+                rows=[]
+                reader=csv.reader(f)
+                fields=next(reader)
+                reader=list(reader)
+                quan=len(reader)
+                for row in reader:
+                    try:
+                        rows.append(row)
+                        if pb!=None:
+                            if reader.index(row)%200==0:#ENABLE PROGRESSBAR
+                                pb['value']=(reader.index(row)/quan)*100
+                                app.update()
+                    except Exception as e:
+                        print(e)
+                        print(row)
+        except FileNotFoundError as e:
+            msgbox=messagebox.showerror('File Not Found',f"'{file}' file was not found. Please make sure it is in the same folder as the application.")
+            return 'Not found'
+        if not raw:
+            d=[]
+            for row in rows:
+                d.append({'Sno':row[0],'Title':row[1],'Author':row[2],'Rating':row[3],'Date':row[4],'Publisher':row[5],'Available':row[6]})
+        else:
+            d=rows
+        return d
 
 def CSVtoDB(arg=None):
     data=loaddata()
@@ -149,6 +128,65 @@ def RegisterFrame(arg=None):
     for child in frame.winfo_children():
         child.grid_configure(padx=5, pady=5)
 
+def SettingsFrame(arg=None):
+    global STATE
+    global ImportVar
+    global ExportVar
+    global ImportB
+    global ExportB
+    app.unbind('<Return>')
+    app.unbind('<F12>')
+    app.bind('<F12>',WelcomeFrame)
+    destroyall()
+    STATE='SETTINGS'
+    app.title(F"Settings")
+    app.geometry(F"257x85")
+    ImportVar=StringVar()
+    ExportVar=StringVar()
+    ExportVar.set(f"{datetime.now().strftime('%d%m%y').replace('/','')}_Export_DB.csv")
+    ImportB=Button(frame,text="Import DB",command=ImportDB)
+    ImportB.grid(column=1,row=0,sticky='E')
+    ImportE=Entry(frame,textvariable=ImportVar,width=30)
+    ImportE.grid(column=0,row=0)
+    ExportB=Button(frame,text="Export DB",command=ExportDB)
+    ExportB.grid(column=1,row=1,sticky='E')
+    ExportE=Entry(frame,textvariable=ExportVar,width=30)
+    ExportE.grid(column=0,row=1)
+    FactoryResetB=Button(frame,text='Factory Reset',command=lambda: ImportDB(file='RESETDATA.csv'),width=34,bg='red')
+    FactoryResetB.grid(column=0,row=2,columnspan=3,pady=3)
+
+def ImportDB(arg=None,file=None):
+    global ImportVar
+    data=loaddata(file=str(ImportVar.get()).strip() if file==None else str(file))
+    if 'found' in data: return
+    db=con.connect(user='root',password='Vedic',database='library')
+    cur=db.cursor()
+    for line in data:
+        if data.index(line)%100==0:
+            print(data.index(line))
+        try:
+            cur.execute(F"insert into test values({line['Sno']},'{line['Title']}','{line['Author']}',{line['Rating']},'{Datefromdate(line['Date']).strftime('%Y-%m-%d')}','{line['Publisher']}',{line['Available']})")
+        except Exception as e:
+            print(e)
+            print(line)
+    db.commit()
+    ImportB.configure(bg='green')
+    app.after(5000,lambda: ImportB.configure(bg='SystemButtonFace'))
+
+def ExportDB(arg=None):
+    global ExportVar
+    global totalD
+    try:
+        if type(totalD)==list: pass
+        else: return messagebox.showwarning('Missing data','Data has not been loaded from the db/is missing. Please try logging in to load the data before exporting again.')
+    except NameError:
+        return messagebox.showwarning('Missing data','Data has not been loaded from the db/is missing. Please try logging in to load the data before exporting again.')
+    with open(str(ExportVar.get()).strip(),'w',encoding='utf-8',newline='') as f:
+        writer=csv.writer(f)
+        writer.writerows([['Sno', 'title', 'authors', 'rating', 'publication', 'publisher', 'Availability']]+[list(item.values()) for item in totalD])
+    ExportB.configure(bg='green')
+    app.after(5000,lambda: ExportB.configure(bg='SystemButtonFace'))
+            
 def MainFrame(arg=None):
     global STATE
     global FilterTitle
@@ -178,7 +216,8 @@ def MainFrame(arg=None):
         return
     STATE="MAIN"
     pb=ttk.Progressbar(frame,orient=HORIZONTAL,length=100,mode='determinate')
-    pb.grid(row=4,column=1,sticky=NSEW,columnspan=2,padx=5)
+    #pb.configure(thickness=5)
+    pb.grid(row=3,column=1,sticky=NSEW,columnspan=2,padx=6,pady=5)
     global totalD
     totalD=loaddata(pb=pb)
     destroyall()
@@ -235,7 +274,7 @@ def MainFrame(arg=None):
     TableBDate.grid(row=0,column=5,sticky=W)
     sorters={'Sno':TableBSno,'Title':TableBTitle,'Author':TableBAuthor,'Rating':TableBRating,'Publisher':TableBPublisher,'Date':TableBDate}
     #Search
-    Search=Button(table,text="Search",height=1,width=8,command=updateVData).grid(row=0,column=6,padx=4,sticky="NSW")
+    Search=Button(table,text="Settings(F12)",font=font.Font(family='Helvetica',name='Settings Font',size=7),height=1,width=10,command=SettingsFrame).grid(row=0,column=6,padx=4,sticky="NSW")
 
     global VISIBLE
     VISIBLE=[]
@@ -348,7 +387,7 @@ def updateAvailability(ckb):
         #print(F"{rawd[index][6]} ({'1' if rawd[index][6]=='0' else '0'})")
         rows=rawd
         if not rows[0]==['bookID','title','authors','average_rating','publication_date','publisher','Availability']: rows.insert(0,['bookID','title','authors','average_rating','publication_date','publisher','Availability'])
-        with open('BOOKDATA.csv','w',encoding='utf-8',newline='') as f:
+        with open('RESETDATA.csv','w',encoding='utf-8',newline='') as f:
             writer=csv.writer(f)
             #print(rows[index])
             writer.writerows(rows)
@@ -528,21 +567,19 @@ def CheckADM(arg=None):
         with open('U.P.txt','w') as f:
             f.write(str(passes))
         RegisterB.configure(bg='green')
-        app.after(5000,fixify)
+        app.after(5000,lambda: RegisterB.configure(bg='SystemButtonFace'))
         messagebox.showinfo('User has been added successfully',F"{User.get()} was added as a user to the system.")
         User.set('')
         Pass.set('')
     else:
         msgbox=messagebox.showwarning('Wrong Password','Admin Password entered is wrong.\nPlease contact your admin for the password.')
 
-def fixify(arg=None):
-    global RegisterB
-    RegisterB.configure(bg='SystemButtonFace')
-
 #WELCOME PAGE ON START UP
 def WelcomeFrame(arg=None):
     app.title("Login")
+    app.geometry(F"205x100")
     app.unbind('<Return>')
+    app.bind('<F12>',SettingsFrame)
     destroyall()
     global STATE
     global User
