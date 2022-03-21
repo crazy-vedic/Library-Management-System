@@ -5,15 +5,13 @@ from tkinter import ttk
 from tkinter import font
 from tkinter import messagebox,Menu,Checkbutton
 import tkinter.scrolledtext as tkst
-from PIL import ImageTk,Image
-import configparser
-import pyautogui as gui
 from functools import lru_cache
-import keyboard as kb
 import mysql.connector as con
 import csv
 
 ADM='ADM'
+GLOBALUSER='root'
+GLOBALPASS='Vedic'
 
 def stripC(string):
     char_list = []
@@ -23,21 +21,24 @@ def stripC(string):
     name = ''.join(char_list)
     return name
 
-try:
-    config = configparser.ConfigParser()
-    config.read('config.ini')
-except configparser.ParsingError as e:
-    out('p',f'There was an error with your config file.')
-
 def destroyall(arg=None):
     for child in frame.winfo_children(): child.destroy()
 
 @lru_cache(maxsize=50)
 def loaddata(file=None,pb=None,raw=False):
     if file==None:
-        db=con.connect(user='root',password='Vedic',database='library')
+        db=con.connect(user=GLOBALUSER,password=GLOBALPASS,database='library')
         cur=db.cursor()
-        cur.execute(F"select * from library")
+        try:
+            cur.execute(F"select * from library")
+        except Exception as e:
+            if e.msg=="Table 'library.library' doesn't exist":
+                cur.execute("CREATE TABLE library (Sno int NOT NULL PRIMARY KEY UNIQUE,Title varchar(255) NOT NULL,Author varchar(1023) ,Rating float(11, 2) DEFAULT 0,Publication date,Publisher varchar(255),available bool DEFAULT 0)")
+                messagebox.showwarning('Missing Table','Table not found, it is being inserted into database "library".\nPlease restart the app.')
+                exit()
+                return
+            else:
+                print("There was a breaking error, please contact the developer.")
         alldata,d=cur.fetchall(),[]
         for item in alldata:
             try:
@@ -81,7 +82,7 @@ def loaddata(file=None,pb=None,raw=False):
 
 def CSVtoDB(arg=None):
     data=loaddata()
-    db=con.connect(user='root',password='Vedic',database='library')
+    db=con.connect(user=GLOBALUSER,password=GLOBALPASS,database='library')
     cur=db.cursor()
     for line in data:
         if data.index(line)%100==0:
@@ -92,8 +93,6 @@ def CSVtoDB(arg=None):
             print(e)
             print(line)
     db.commit()
-
-#kb.on_press_key('F7',CSVtoDB)
 
 app = Tk()
 frame=ttk.Frame(app,padding='5 1 5 5')
@@ -112,6 +111,7 @@ def RegisterFrame(arg=None):
     global userEntry
     global passEntry
     global RegisterB
+    app.geometry(F"250x130")
     ADMINP=StringVar(frame)
     AdminPLabel=Label(frame,text="Admin Password").grid(column=2,row=1)
     AdminPEntry=Entry(frame,textvariable=ADMINP,show="*")
@@ -159,19 +159,22 @@ def ImportDB(arg=None,file=None):
     global ImportVar
     data=loaddata(file=str(ImportVar.get()).strip() if file==None else str(file))
     if 'found' in data: return
-    db=con.connect(user='root',password='Vedic',database='library')
+    db=con.connect(user=GLOBALUSER,password=GLOBALPASS,database='library')
     cur=db.cursor()
     for line in data:
         if data.index(line)%100==0:
             print(data.index(line))
         try:
-            cur.execute(F"insert into test values({line['Sno']},'{line['Title']}','{line['Author']}',{line['Rating']},'{Datefromdate(line['Date']).strftime('%Y-%m-%d')}','{line['Publisher']}',{line['Available']})")
+            cur.execute(F"insert into library values({line['Sno']},'{line['Title']}','{line['Author']}',{line['Rating']},'{Datefromdate(line['Date']).strftime('%Y-%m-%d')}','{line['Publisher']}',{line['Available']})")
         except Exception as e:
             print(e)
             print(line)
     db.commit()
     ImportB.configure(bg='green')
-    app.after(5000,lambda: ImportB.configure(bg='SystemButtonFace'))
+    try:
+        app.after(5000,lambda: ImportB.configure(bg='SystemButtonFace'))
+    except Exception as e:
+        pass
 
 def ExportDB(arg=None):
     global ExportVar
@@ -252,7 +255,6 @@ def MainFrame(arg=None):
     Entry(frame,textvariable=FilterDate,width=35).grid(row=1,column=5,padx=1,sticky=W)
     #Page Up/Down
     PGUP=Button(frame,text='PgUp',height=1,width=5,command=pgUp).grid(row=0,column=6,sticky=W)
-    #PGDN=Button(frame,image=ImageTk.PhotoImage(Image.open('pgdn.png')),height=1,width=4).grid(row=1,column=6,sticky=W)
     PGDN=Button(frame,text='PgDn',height=1,width=5,command=pgDown).grid(row=1,column=6,sticky=W)
 
     #TABLE
@@ -274,7 +276,7 @@ def MainFrame(arg=None):
     TableBDate.grid(row=0,column=5,sticky=W)
     sorters={'Sno':TableBSno,'Title':TableBTitle,'Author':TableBAuthor,'Rating':TableBRating,'Publisher':TableBPublisher,'Date':TableBDate}
     #Search
-    Search=Button(table,text="Settings(F12)",font=font.Font(family='Helvetica',name='Settings Font',size=7),height=1,width=10,command=SettingsFrame).grid(row=0,column=6,padx=4,sticky="NSW")
+    Search=Button(table,text="Import(F12)",font=font.Font(family='Helvetica',name='Settings Font',size=7),height=1,width=10,command=SettingsFrame).grid(row=0,column=6,padx=4,sticky="NSW")
 
     global VISIBLE
     VISIBLE=[]
@@ -354,7 +356,7 @@ def updateAvailability(ckb):
     global totalD
     global rawd
 
-    db=con.connect(user='root',password='Vedic',database='library')
+    db=con.connect(user=GLOBALUSER,password=GLOBALPASS,database='library')
     cur=db.cursor()
     ogshown=[]
     for row in VISIBLE:
@@ -363,7 +365,6 @@ def updateAvailability(ckb):
         ogshown.append(list(filter(lambda x: int(x['Sno'])==int(row[0].get('1.0',END)),totalD))[0])#Get original data of everything shown
     idex=int(ckb._name.split('B')[1])
     og=ogshown[int(idex)-1]
-    print(og)
     cur.execute(F"update library set available={'1' if og['Available']=='0' else '0'} where Sno={og['Sno']}")
     db.commit()
     return
@@ -567,7 +568,10 @@ def CheckADM(arg=None):
         with open('U.P.txt','w') as f:
             f.write(str(passes))
         RegisterB.configure(bg='green')
-        app.after(5000,lambda: RegisterB.configure(bg='SystemButtonFace'))
+        try:
+            app.after(5000,lambda: RegisterB.configure(bg='SystemButtonFace'))
+        except Exception as e:
+            pass
         messagebox.showinfo('User has been added successfully',F"{User.get()} was added as a user to the system.")
         User.set('')
         Pass.set('')
@@ -593,7 +597,6 @@ def WelcomeFrame(arg=None):
     userEntry.grid(row=1,column=2)
     passLabel=Label(frame,text='Password').grid(row=2,column=1)
     userEntry=Entry(frame,textvariable=Pass,show="*").grid(row=2,column=2)
-    #Register=ImageTk.PhotoImage(Image.open("register.png"))
     REGISTER=Button(frame,text='Register',font=font.Font(family='Helvetica',name='Register Button Font',size=8),command=RegisterFrame).grid(row=3,column=1,sticky=NSEW)
     PASSCHECK=Button(frame,activebackground='#00FFFF',bg='#00FFFF',text="Next",command=MainFrame)
     PASSCHECK.grid(row=3,column=2,sticky=NSEW)
@@ -602,8 +605,6 @@ def WelcomeFrame(arg=None):
     app.bind('<Return>',MainFrame)
     User.set('Vedic')######################DELETE
     Pass.set('Pass')#######################DELETE
-
-#app.iconphoto(False, PhotoImage(file=resource_path('icon.png')))
 
 WelcomeFrame()
 app.mainloop()
